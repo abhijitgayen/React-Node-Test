@@ -50,7 +50,7 @@ const view = async (req, res) => {
         path: 'createBy',
         match: { deleted: false } // Populate only if createBy.deleted is false
     }).exec();
-    
+
     if (!meeting) {
         return res.status(404).json({ message: 'Meeting not found' });
     }
@@ -78,16 +78,13 @@ const deleteData = async (req, res) => {
     }
 };
 
+
 // Delete multiple meetings
 const deleteMany = async (req, res) => {
     try {
-        const { ids } = req.body; // Expecting an array of meeting IDs
+         
 
-        if (!ids || !Array.isArray(ids)) {
-            return res.status(400).json({ message: 'Invalid input, expected an array of IDs' });
-        }
-
-        const deletedMeetings = await MeetingHistory.deleteMany({ _id: { $in: ids } });
+        const deletedMeetings = await MeetingHistory.updateMany({ _id: { $in: req.body } }, { $set: { deleted: true } });
 
         res.status(200).json({ message: 'done', deletedMeetings });
     } catch (error) {
