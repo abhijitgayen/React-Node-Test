@@ -27,36 +27,53 @@ const add = async (req, res) => {
 
 // Get all meetings
 const index = async (req, res) => {
-    const query = req.query
-    query.deleted = false;
+    try {
+        const query = req.query;
+        query.deleted = false;
 
-    let allData = await MeetingHistory.find(query).populate({
-        path: 'createBy',
-        match: { deleted: false } // Populate only if createBy.deleted is false
-    }).exec()
+        let allData = await MeetingHistory.find(query)
+            .populate({
+                path: 'createBy',
+                match: { deleted: false },
+                select: 'username' // Only return name and email
+            })
+            .exec();
 
-    const result = allData.filter(item => item.createBy !== null);
-    res.send(result)
+        const result = allData.filter(item => item.createBy !== null);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching meetings:', error);
+        res.status(500).json({ message: 'Internal Server Error', error });
+    }
 };
 
 // Get a single meeting by ID
 const view = async (req, res) => {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid meeting ID' });
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid meeting ID' });
+        }
+
+        const meeting = await MeetingHistory.findById(id)
+            .populate({
+                path: 'createBy',
+                match: { deleted: false },
+                select: 'username' // Only return name and email
+            })
+            .exec();
+
+        if (!meeting) {
+            return res.status(404).json({ message: 'Meeting not found' });
+        }
+
+        res.status(200).json(meeting);
+    } catch (error) {
+        console.error('Error fetching meeting:', error);
+        res.status(500).json({ message: 'Internal Server Error', error });
     }
-
-    const meeting = await MeetingHistory.findById(id).populate({
-        path: 'createBy',
-        match: { deleted: false } // Populate only if createBy.deleted is false
-    }).exec();
-
-    if (!meeting) {
-        return res.status(404).json({ message: 'Meeting not found' });
-    }
-
-    res.status(200).json(meeting);
 };
+
 
 // Delete a single meeting by ID
 const deleteData = async (req, res) => {
@@ -82,8 +99,6 @@ const deleteData = async (req, res) => {
 // Delete multiple meetings
 const deleteMany = async (req, res) => {
     try {
-         
-
         const deletedMeetings = await MeetingHistory.updateMany({ _id: { $in: req.body } }, { $set: { deleted: true } });
 
         res.status(200).json({ message: 'done', deletedMeetings });
